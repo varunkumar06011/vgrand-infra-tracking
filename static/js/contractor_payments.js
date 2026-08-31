@@ -216,7 +216,7 @@ function renderContractorCards() {
                     '</div>' +
                     '<div class="cp-card-actions" style="display:flex;align-items:center;gap:6px;">' +
                         '<span class="cp-status ' + cpStatusClass(c.status) + '">' + statusLabel + '</span>' +
-                        (c.status !== 'cancelled' ? '<button class="cp-delete-contract-btn" data-contract-id="' + escapeHtml(c.id) + '" title="Cancel contract">&#128465;</button>' : '') +
+                        (c.status !== 'cancelled' && currentUserPermissions && currentUserPermissions.manageContracts ? '<button class="cp-delete-contract-btn" data-contract-id="' + escapeHtml(c.id) + '" title="Cancel contract">&#128465;</button>' : '') +
                     '</div>' +
                 '</div>' +
                 '<div class="cp-card-financials">' +
@@ -357,6 +357,33 @@ async function openContractDetail(contractId) {
     if (!c) return;
     contractorDetailContract = c;
     document.getElementById('contractDetailTitle').textContent = c.person_name + ' \u2014 ' + c.work_description;
+
+    // Hide edit/cancel controls for roles without manageContracts permission
+    var canManage = currentUserPermissions && currentUserPermissions.manageContracts;
+    var editSection = document.querySelector('#contractDetailModal .po-section-label');
+    if (editSection) editSection.style.display = canManage ? '' : 'none';
+    var editFields = document.querySelectorAll('#contractDetailModal .invoice-form-row');
+    editFields.forEach(function(row) {
+        if (row.querySelector('#cpDetailName') || row.querySelector('#cpUpdateContractBtn')) {
+            row.style.display = canManage ? '' : 'none';
+        }
+    });
+    var cancelBtn = document.getElementById('cpCancelContractBtn');
+    if (cancelBtn) cancelBtn.style.display = canManage ? '' : 'none';
+
+    // Hide record payment section for roles without recordPayments permission
+    var canRecord = currentUserPermissions && currentUserPermissions.recordPayments;
+    var cpModal = document.getElementById('contractDetailModal');
+    if (cpModal) {
+        var cpRecordHeaders = cpModal.querySelectorAll('h4');
+        cpRecordHeaders.forEach(function(h4) {
+            if (h4.textContent.trim() === 'Record Payment') {
+                h4.style.display = canRecord ? '' : 'none';
+                var next = h4.nextElementSibling;
+                if (next && next.classList.contains('invoice-form-row')) next.style.display = canRecord ? '' : 'none';
+            }
+        });
+    }
 
     var summaryEl = document.getElementById('contractDetailSummary');
     if (summaryEl) {

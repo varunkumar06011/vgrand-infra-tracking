@@ -121,7 +121,7 @@ async function ipLoadPurchases() {
 }
 
 async function ipLoadOutstanding() {
-    if (currentUserRole !== 'admin') return;
+    if (!currentUserPermissions || !currentUserPermissions.viewVendorOutstanding) return;
     try { ipOutstanding = await apiGet('/api/day-book/vendor-outstanding') || []; }
     catch (e) { ipOutstanding = []; }
 }
@@ -225,7 +225,7 @@ function renderIPSummary() {
     if (!el) return;
     var totalAmount = ipPurchases.reduce(function(s, p) { return s + (Number(p.amount) || 0); }, 0);
     var html = '<div class="po-fin-row"><span class="po-fin-label">Total Purchases (' + ipPurchases.length + ')</span><span class="po-fin-value">' + ipFmtMoney(totalAmount) + '</span></div>';
-    if (currentUserRole === 'admin' && ipOutstanding.length > 0) {
+    if (currentUserPermissions && currentUserPermissions.viewVendorOutstanding && ipOutstanding.length > 0) {
         var totalOutstanding = ipOutstanding.reduce(function(s, v) { return s + (Number(v.outstanding) || 0); }, 0);
         html += '<div class="po-fin-row"><span class="po-fin-label">Total Vendor Outstanding</span><span class="po-fin-value po-fin-outstanding">' + ipFmtMoney(totalOutstanding) + '</span></div>';
     }
@@ -274,7 +274,7 @@ function renderIPTable() {
 
     html += '</tbody></table></div>';
 
-    if (currentUserRole === 'admin' || currentUserRole === 'manager') {
+    if (currentUserPermissions && currentUserPermissions.viewVendorOutstanding) {
         html += '<div style="margin-top:16px;"><button id="ipVendorOutstandingBtn" class="btn-secondary" style="padding:8px 16px;">View Vendor Outstanding</button></div>';
     }
 
@@ -374,6 +374,8 @@ function openIPPurchaseForm(editId) {
                 '<div><label style="font-size:0.85rem;color:#666;">Entry Type *</label><select id="ipFormPaymentType" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:6px;"><option value="vendor"' + (currentPaymentType === 'vendor' ? ' selected' : '') + '>Vendor</option><option value="contract"' + (currentPaymentType === 'contract' ? ' selected' : '') + '>Contract Payment</option><option value="inventory"' + (currentPaymentType === 'inventory' ? ' selected' : '') + '>Inventory</option><option value="other"' + (currentPaymentType === 'other' ? ' selected' : '') + '>Other</option></select></div>' +
                 '<div><label style="font-size:0.85rem;color:#666;">Date *</label><input type="date" id="ipFormInvoiceDate" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:6px;" value="' + (editing ? (editing.invoice_date || '') : today) + '"></div>' +
             '</div>' +
+            '<div id="ipOpenVendorPaymentsLink" style="display:none;margin-top:8px;"><a href="#/vendors" style="font-size:0.85rem;color:#2563eb;cursor:pointer;text-decoration:underline;">Go to Vendor Payments section &rarr;</a></div>' +
+            '<div id="ipOpenContractorPaymentsLink" style="display:none;margin-top:8px;"><a href="#/contractor-payments" style="font-size:0.85rem;color:#2563eb;cursor:pointer;text-decoration:underline;">Go to Contractor Payments section &rarr;</a></div>' +
             // --- Vendor / Contract fields ---
             '<div id="ipSectionVendorContract" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">' +
                 '<div id="ipVendorFieldWrap"><label style="font-size:0.85rem;color:#666;">Vendor</label><div style="display:flex;gap:4px;"><input type="text" id="ipFormVendor" list="ipVendorList" style="flex:1;padding:8px;border:1px solid #ccc;border-radius:6px;" value="' + ipEscape(editing ? (editing.vendor_name || '') : '') + '" placeholder="Type or select"><datalist id="ipVendorList">' + vendorOpts + '</datalist><button type="button" class="btn-secondary ip-new-vendor-btn" style="padding:8px 10px;font-size:0.8rem;white-space:nowrap;">+ New</button></div></div>' +
@@ -477,6 +479,11 @@ function openIPPurchaseForm(editId) {
         sectionOther.style.display = (pt === 'other') ? '' : 'none';
         // Remarks: hidden for Other (uses Narration instead)
         sectionRemarks.style.display = (pt === 'other') ? 'none' : '';
+        // Payment section link: show for vendor/contract entry types
+        var vendorLink = document.getElementById('ipOpenVendorPaymentsLink');
+        var contractLink = document.getElementById('ipOpenContractorPaymentsLink');
+        if (vendorLink) vendorLink.style.display = (pt === 'vendor') ? '' : 'none';
+        if (contractLink) contractLink.style.display = (pt === 'contract') ? '' : 'none';
     }
     paymentTypeSelect.addEventListener('change', togglePaymentFields);
 
@@ -486,6 +493,24 @@ function openIPPurchaseForm(editId) {
         if (contractInput) contractInput.value = editing.vendor_name;
     }
     togglePaymentFields();
+
+    // --- Payment section navigation links ---
+    var vendorPaymentsLink = document.getElementById('ipOpenVendorPaymentsLink');
+    if (vendorPaymentsLink) {
+        vendorPaymentsLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            modal.remove();
+            if (typeof openVendorDirPanel === 'function') openVendorDirPanel();
+        });
+    }
+    var contractorPaymentsLink = document.getElementById('ipOpenContractorPaymentsLink');
+    if (contractorPaymentsLink) {
+        contractorPaymentsLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            modal.remove();
+            if (typeof openContractorPaymentsPanel === 'function') openContractorPaymentsPanel();
+        });
+    }
 
     // --- + New Vendor button ---
     modal.querySelector('.ip-new-vendor-btn').addEventListener('click', function() {
@@ -962,8 +987,8 @@ async function openVendorDetail(vendorId) {
             html += '<div style="color:#999;padding:12px;">No payments recorded.</div>';
         }
 
-        // Record payment button (admin/manager)
-        if (currentUserRole === 'admin' || currentUserRole === 'manager') {
+        // Record payment button (roles with recordPayments permission)
+        if (currentUserPermissions && currentUserPermissions.recordPayments) {
             html += '<div style="margin-top:16px;"><button id="ipRecordPaymentBtn" class="btn-primary" style="padding:8px 20px;">+ Record Payment</button></div>';
         }
 

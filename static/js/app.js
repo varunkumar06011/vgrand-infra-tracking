@@ -229,9 +229,11 @@ const SIDEBAR_CONFIG = {
                 ]
             },
             {
-                title: 'Labor',
+                title: 'Financials',
                 items: [
                     { id: 'openAttendanceBtn', icon: '\u{1F465}', label: 'Attendance' },
+                    { id: 'openVendorsBtn', icon: '\u{1F465}', label: 'Vendor Payments' },
+                    { id: 'openContractorPaymentsBtn', icon: '\u{1F527}', label: 'Contractor Payments' },
                 ]
             },
             {
@@ -966,6 +968,11 @@ function buildPermissions(role) {
         p.viewDesignGenerator = false;
         p.viewStockPurchases = true;
         p.editStockPurchases = false;
+        p.viewVendorPayments = true;
+        p.viewContractorPayments = true;
+        p.recordPayments = true;
+        p.viewVendorOutstanding = true;
+        p.manageContracts = false;
     } else if (role === 'manager' || role === 'admin') {
         p.viewDashboard = true;
         p.updateCellStatus = true;
@@ -989,6 +996,11 @@ function buildPermissions(role) {
         p.viewDesignGenerator = true;
         p.viewStockPurchases = true;
         p.editStockPurchases = role === 'admin';
+        p.viewVendorPayments = true;
+        p.viewContractorPayments = role === 'admin';
+        p.recordPayments = true;
+        p.viewVendorOutstanding = true;
+        p.manageContracts = role === 'admin';
     } else {
         // Unknown / fallback read-only
         p.viewDashboard = true;
@@ -1143,6 +1155,8 @@ function applyRoleBasedUI() {
     hide('addPOBtn');
     hide('addVendorBtn');
     hide('addVendorCategoryBtn');
+    hide('vdAddVendorBtn');
+    hide('addContractBtn');
     if (currentUserPermissions.viewInvoices) show('addInvoiceBtn');
     if (currentUserPermissions.viewInvoices) show('invoiceAddCategoryBtn');
     if (currentUserPermissions.viewPOs) show('addPOBtn');
@@ -1150,6 +1164,8 @@ function applyRoleBasedUI() {
         show('addVendorBtn');
         show('addVendorCategoryBtn');
     }
+    if (currentUserPermissions.editVendors) show('vdAddVendorBtn');
+    if (currentUserPermissions.manageContracts) show('addContractBtn');
 
     // Dynamically render the sidebar from SIDEBAR_CONFIG
     renderSidebar();

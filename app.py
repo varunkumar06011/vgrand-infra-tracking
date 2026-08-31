@@ -3030,9 +3030,10 @@ def api_day_book_payment_delete(pid):
 
 
 @app.route('/api/day-book/vendor-outstanding')
-@requires_role('admin')
+@requires_role_or_override('supervisor')
 def api_day_book_vendor_outstanding():
-    """Admin only: per-vendor outstanding = total purchased - total paid."""
+    """Per-vendor outstanding = total purchased - total paid.
+    Accessible by admin, manager, and supervisor."""
     if not supabase:
         return jsonify([]), 500
     org_id = session['user'].get('org_id')
@@ -4512,7 +4513,7 @@ def api_contractor_contracts_for_dropdown():
 
 
 @app.route('/api/contractor-contracts')
-@requires_role('admin')
+@requires_role_or_override('supervisor')
 def api_contractor_contracts_list():
     if not supabase:
         return jsonify({'error': 'Supabase not connected'}), 500
@@ -4699,7 +4700,7 @@ def api_contractor_contracts_cancel(contract_id):
 
 
 @app.route('/api/contractor-contracts/<contract_id>/payments')
-@requires_role('admin')
+@requires_role_or_override('supervisor')
 def api_contractor_payments_list(contract_id):
     if not supabase:
         return jsonify({'error': 'Supabase not connected'}), 500
@@ -4715,7 +4716,7 @@ def api_contractor_payments_list(contract_id):
 
 
 @app.route('/api/contractor-contracts/<contract_id>/payments', methods=['POST'])
-@requires_role('admin')
+@requires_role_or_override('supervisor')
 def api_contractor_payments_create(contract_id):
     if not supabase:
         return jsonify({'error': 'Supabase not connected'}), 500

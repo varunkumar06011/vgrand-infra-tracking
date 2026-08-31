@@ -157,7 +157,7 @@ function renderVDCards() {
                     '</div>' +
                     '<div class="cp-card-actions" style="display:flex;align-items:center;gap:6px;">' +
                         '<span class="cp-status ' + statusClass + '">' + statusLabel + '</span>' +
-                        '<button class="cp-delete-contract-btn vd-retire-btn" data-vid="' + vdEscape(v.id) + '" title="Delete vendor">&#128465;</button>' +
+                        (currentUserPermissions && currentUserPermissions.editVendors ? '<button class="cp-delete-contract-btn vd-retire-btn" data-vid="' + vdEscape(v.id) + '" title="Delete vendor">&#128465;</button>' : '') +
                     '</div>' +
                 '</div>' +
                 '<div class="cp-card-financials">' +
@@ -238,6 +238,20 @@ async function openVDDetail(vendorId) {
     var v = vdVendors.find(function(x) { return x.id === vendorId; });
     if (!v) return;
     vdDetailVendor = v;
+
+    // Hide record payment section for roles without recordPayments permission
+    var canRecord = currentUserPermissions && currentUserPermissions.recordPayments;
+    var vdModal = document.getElementById('vendorDetailModal');
+    if (vdModal) {
+        var recordHeaders = vdModal.querySelectorAll('h4');
+        recordHeaders.forEach(function(h4) {
+            if (h4.textContent.trim() === 'Record Payment') {
+                h4.style.display = canRecord ? '' : 'none';
+                var next = h4.nextElementSibling;
+                if (next && next.classList.contains('invoice-form-row')) next.style.display = canRecord ? '' : 'none';
+            }
+        });
+    }
 
     document.getElementById('vendorDetailTitle').textContent = v.name;
 
